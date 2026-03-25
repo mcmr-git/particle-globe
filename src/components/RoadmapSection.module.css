@@ -1,0 +1,166 @@
+/* ── Section wrapper ─────────────────────────────────────────────── */
+.section {
+  position: relative;
+  width: 100%;
+  /* SVG_H / SVG_W * 100vw — but we use a fixed tall height in vw units */
+  /* SVG is 400×2800 so aspect ratio = 7. We use full width. */
+  height: 700vw;
+  max-height: 4800px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ── Burst canvas ────────────────────────────────────────────────── */
+.burstCanvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+}
+
+/* ── SVG path ────────────────────────────────────────────────────── */
+.svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.svgPath {
+  fill: none;
+  stroke: rgba(240, 236, 228, 0.7);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  /* dasharray/dashoffset set by JS */
+  will-change: stroke-dashoffset;
+}
+
+/* ── Nodes: base ─────────────────────────────────────────────────── */
+.node {
+  position: absolute;
+  /* Centre the node on the SVG coordinate by translating -50% -50% */
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  z-index: 20;
+  /* hidden until revealed */
+  opacity: 0;
+  scale: 0.7;
+  transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1),
+              scale   0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  /* float applied by JS transform — don't override with transitions */
+  will-change: transform, opacity;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.node.revealed {
+  opacity: 1;
+  scale: 1;
+}
+
+/* left: dot on left, label on right */
+.side_left {
+  flex-direction: row;
+}
+
+/* right: dot on right, label on left — achieved via row-reverse */
+.side_right {
+  flex-direction: row-reverse;
+}
+
+/* center: stacked */
+.side_center {
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Dot ─────────────────────────────────────────────────────────── */
+.dot {
+  display: block;
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(240, 236, 228, 0.95);
+  box-shadow:
+    0 0 0 2px rgba(240, 236, 228, 0.12),
+    0 0 12px rgba(240, 236, 228, 0.25);
+  transition: transform 0.15s;
+  will-change: transform;
+}
+
+.node:hover .dot,
+.node:focus .dot {
+  box-shadow:
+    0 0 0 3px rgba(240, 236, 228, 0.2),
+    0 0 22px rgba(240, 236, 228, 0.45);
+}
+
+/* ── Label ───────────────────────────────────────────────────────── */
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.labelText {
+  font-family: var(--serif);
+  font-size: clamp(0.85rem, 2.2vw, 1.15rem);
+  font-weight: 200;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  color: rgba(240, 236, 228, 0.88);
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.node:hover .labelText,
+.node:focus .labelText {
+  color: rgba(240, 236, 228, 1);
+}
+
+/* ── Final node ──────────────────────────────────────────────────── */
+.nodeFinal {
+  gap: 0;
+}
+
+.labelFinal .labelText {
+  font-size: clamp(1.4rem, 4vw, 2.8rem);
+  font-weight: 100;
+  letter-spacing: -0.015em;
+  color: rgba(240, 236, 228, 0.95);
+  white-space: normal;
+  text-align: center;
+  max-width: 60vw;
+  line-height: 1.05;
+}
+
+/* ── Australia map ───────────────────────────────────────────────── */
+.australiaMap {
+  width: clamp(80px, 16vw, 130px);
+  height: auto;
+  opacity: 0.75;
+  transition: opacity 0.2s;
+  display: block;
+}
+
+.node:hover .australiaMap,
+.node:focus .australiaMap {
+  opacity: 1;
+}
+
+/* ── Step number (subtle) ────────────────────────────────────────── */
+.stepNum {
+  font-family: var(--sans);
+  font-size: 0.55rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted-dim);
+  margin-bottom: 2px;
+}

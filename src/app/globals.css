@@ -16,19 +16,27 @@
   --fg: #f0ece4;
   --accent: #e8e0d0;
   --muted: rgba(240, 236, 228, 0.35);
+  --muted-dim: rgba(240, 236, 228, 0.18);
   --serif: 'Exposure', 'Georgia', serif;
   --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+html {
+  scroll-behavior: auto;
+}
+
 html, body {
   width: 100%;
-  height: 100%;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
+  overflow-x: hidden;
+}
+
+body {
+  overflow-y: scroll;
 }
 
 button {
