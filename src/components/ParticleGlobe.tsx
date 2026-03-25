@@ -173,13 +173,10 @@ export default function ParticleGlobe() {
         ctx.beginPath()
         ctx.arc(sx, sy, Math.max(0.3, sz), 0, TWO_PI)
 
-        if (proximity > 0.05) {
-          // warm ivory glow near cursor
-          ctx.fillStyle = `rgba(232, 220, 195, ${glowAlpha})`
-        } else {
-          // cool blue-white base
-          ctx.fillStyle = `rgba(210, 218, 235, ${alpha})`
-        }
+        // pure white — proximity boosts alpha only, no colour shift
+        ctx.fillStyle = proximity > 0.05
+          ? `rgba(255, 255, 255, ${glowAlpha})`
+          : `rgba(255, 255, 255, ${alpha})`
         ctx.fill()
       }
 
