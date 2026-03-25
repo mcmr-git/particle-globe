@@ -5,8 +5,8 @@ import gsap from 'gsap'
 import styles from './ParticleMorph.module.css'
 
 // ─── Config ────────────────────────────────────────────────────────
-const N     = 800    // total particles
-const SPACE = 500   // coordinate space for shape definitions
+const N     = 800
+const SPACE = 500
 
 const SHAPE_LABELS = ['home', 'in the air', 'at the table', 'in paradise'] as const
 
@@ -30,8 +30,8 @@ function qbez(
   if (n <= 1) return [[x0, y0]]
   return Array.from({ length: n }, (_, i) => {
     const t = i / (n - 1), u = 1 - t
-    return [u * u * x0 + 2 * u * t * cx + t * t * x1,
-            u * u * y0 + 2 * u * t * cy + t * t * y1] as const
+    return [u*u*x0 + 2*u*t*cx + t*t*x1,
+            u*u*y0 + 2*u*t*cy + t*t*y1] as const
   })
 }
 
@@ -56,19 +56,18 @@ function resample(pts: Pt[], n: number): Pt[] {
   if (pts.length === 0) return Array.from({ length: n }, () => [SPACE/2, SPACE/2] as unknown as Pt)
   if (pts.length === 1) return Array.from({ length: n }, () => pts[0])
   return Array.from({ length: n }, (_, i) => {
-    const t   = (i / (n - 1)) * (pts.length - 1)
-    const lo  = Math.floor(t)
-    const hi  = Math.min(lo + 1, pts.length - 1)
-    const f   = t - lo
-    return [
-      pts[lo][0] * (1 - f) + pts[hi][0] * f,
-      pts[lo][1] * (1 - f) + pts[hi][1] * f,
-    ] as const
+    const t  = (i / (n - 1)) * (pts.length - 1)
+    const lo = Math.floor(t)
+    const hi = Math.min(lo + 1, pts.length - 1)
+    const f  = t - lo
+    return [pts[lo][0]*(1-f) + pts[hi][0]*f,
+            pts[lo][1]*(1-f) + pts[hi][1]*f] as const
   })
 }
 
-// ─── Shape definitions (all in [0,500] × [0,500]) ─────────────────────
+// ─── Shape definitions ──────────────────────────────────────────────────
 
+/** House: peaked roof + walls + door + chimney (unchanged) */
 function makeHouse(): Pt[] {
   const raw: Pt[] = [
     ...seg(250, 108, 118, 252, 55),
@@ -87,48 +86,114 @@ function makeHouse(): Pt[] {
   return resample(raw, N)
 }
 
+/**
+ * Plane: side view, flying right.
+ * Redesigned for visual weight:
+ * - Fuselage drawn as a CLOSED tube (top curve + nose arc + bottom curve + tail edge)
+ * - Wing drawn as a CLOSED triangle outline (all three sides visible)
+ * - Tail fins as closed shapes
+ * - Cockpit window oval near nose for focal detail
+ */
 function makePlane(): Pt[] {
   const raw: Pt[] = [
-    ...qbez(108, 244, 258, 224, 390, 252, 80),
-    ...seg(390, 252, 395, 256,  5),
-    ...seg(395, 256, 390, 260,  5),
-    ...qbez(390, 260, 258, 276, 108, 260, 80),
-    ...seg(108, 260, 108, 244,  8),
-    ...seg(298, 254, 170, 338, 65),
-    ...seg(170, 338, 338, 264, 68),
-    ...seg(338, 264, 298, 254,  4),
-    ...seg(120, 244, 106, 190, 26),
-    ...seg(106, 190, 142, 250, 26),
-    ...seg(104, 260, 100, 274, 10),
-    ...seg(100, 274, 144, 268, 20),
-    ...seg(144, 268, 144, 262,  5),
+    // ─ Fuselage top edge: tail → nose ─
+    ...qbez(108, 240, 258, 218, 392, 249, 92),
+    // Nose cap — small arc connecting top to bottom
+    ...seg(392, 249, 397, 254,  6),
+    ...seg(397, 254, 392, 259,  6),
+    // ─ Fuselage bottom edge: nose → tail ─
+    ...qbez(392, 259, 258, 280, 108, 264, 92),
+    // Tail back edge closes the tube
+    ...seg(108, 264, 108, 240, 12),
+
+    // ─ Main wing — closed triangle outline ─
+    // Leading edge (root → tip)
+    ...seg(300, 252, 165, 338, 72),
+    // Wingtip: small connector
+    ...seg(165, 338, 175, 342,  5),
+    // Trailing edge (tip → root)
+    ...seg(175, 342, 338, 262, 72),
+    // Wing root connector (closes triangle on fuselage)
+    ...seg(338, 262, 300, 252,  6),
+
+    // ─ Vertical tail fin — closed triangle ─
+    ...seg(118, 240, 104, 186, 28),
+    ...seg(104, 186, 144, 242, 28),
+
+    // ─ Horizontal stabiliser — closed rectangle ─
+    ...seg(102, 264, 148, 260, 22),
+    ...seg(148, 260, 148, 270,  6),
+    ...seg(148, 270, 102, 274, 22),
+    ...seg(102, 274, 102, 264,  6),
+
+    // ─ Cockpit window — small oval near nose ─
+    ...qbez(370, 242, 380, 238, 390, 244, 10),
+    ...qbez(390, 244, 382, 250, 370, 246, 10),
   ]
   return resample(raw, N)
 }
 
+/**
+ * Fork & Knife: two upright utensils.
+ * Redesigned for visual weight:
+ * - Each tine drawn as a 4px-wide rectangle (both edges + top cap)
+ * - Handle drawn as a proper rectangle perimeter (wider, both edges + bottom)
+ * - Knife blade as a full trapezoid outline (both edges converge to tip)
+ * - Guard crosspiece on knife
+ */
 function makeForkKnife(): Pt[] {
+  // ─ FORK (centered ~x=186) ─────────────────────────────────
+  // Tines: each 4px wide, 7px spacing between tines
+  // Tine 1 at x=[173,177], tine 2 at x=[184,188], tine 3 at x=[195,199]
   const fork: Pt[] = [
-    ...seg(177, 175, 177, 288, 36),
-    ...seg(187, 175, 187, 288, 36),
-    ...seg(197, 175, 197, 288, 36),
-    ...qbez(177, 288, 187, 302, 197, 288, 16),
-    ...seg(182, 300, 182, 390, 27),
-    ...seg(182, 390, 192, 390,  5),
-    ...seg(192, 390, 192, 300, 27),
-    ...qbez(177, 175, 187, 168, 197, 175, 10),
+    // Tine 1 — left edge, top cap, right edge
+    ...seg(173, 178, 173, 290, 33),
+    ...seg(173, 178, 177, 178,  4),
+    ...seg(177, 178, 177, 290, 33),
+    // Tine 2 — left edge, top cap, right edge
+    ...seg(184, 178, 184, 290, 33),
+    ...seg(184, 178, 188, 178,  4),
+    ...seg(188, 178, 188, 290, 33),
+    // Tine 3 — left edge, top cap, right edge
+    ...seg(195, 178, 195, 290, 33),
+    ...seg(195, 178, 199, 178,  4),
+    ...seg(199, 178, 199, 290, 33),
+    // Arch joining all tine bottoms → handle neck
+    ...qbez(173, 290, 186, 310, 199, 290, 18),
+    // Handle — left edge
+    ...seg(180, 308, 180, 394, 26),
+    // Handle bottom
+    ...seg(180, 394, 194, 394,  8),
+    // Handle — right edge
+    ...seg(194, 394, 194, 308, 26),
   ]
+
+  // ─ KNIFE (centered ~x=316) ────────────────────────────────
+  // Blade: converges from guard (14px wide) to tip point
+  // Guard at y=292, tip at (316, 170)
   const knife: Pt[] = [
-    ...seg(311, 175, 310, 290, 36),
-    ...seg(310, 290, 322, 290, 10),
-    ...qbez(322, 290, 323, 232, 318, 175, 36),
-    ...seg(318, 175, 311, 175,  4),
-    ...seg(310, 290, 310, 390, 27),
-    ...seg(310, 390, 322, 390,  5),
-    ...seg(322, 390, 322, 290, 27),
+    // Blade left edge (straight, sharp side)
+    ...seg(310, 292, 316, 170, 38),
+    // Blade tip top connector (tiny horizontal)
+    ...seg(316, 170, 321, 172,  3),
+    // Blade right edge (slight belly curve on spine side)
+    ...qbez(321, 172, 326, 228, 324, 292, 38),
+    // Guard (crosspiece)
+    ...seg(306, 292, 328, 292, 14),
+    // Handle — left edge
+    ...seg(309, 294, 309, 394, 28),
+    // Handle bottom
+    ...seg(309, 394, 323, 394,  8),
+    // Handle — right edge
+    ...seg(323, 394, 323, 294, 28),
+    // Handle top connector (between guard and handle)
+    ...seg(309, 294, 323, 294,  8),
   ]
+
   return resample([...fork, ...knife], N)
 }
 
+/** Palm tree: curved trunk + 7 arching fronds (unchanged) */
 function makePalmTree(): Pt[] {
   const trunk = cbez(250, 388, 253, 315, 260, 235, 266, 162, 70)
   const top: Pt = [266, 162]
@@ -164,7 +229,7 @@ interface Particle {
   freqY:   number
   phaseX:  number
   phaseY:  number
-  stagger: number  // morph stagger [0, 0.35]
+  stagger: number
   r:       number
 }
 
@@ -179,7 +244,6 @@ export default function ParticleMorph() {
   const morphingRef = useRef(false)
   const shapeIdxRef = useRef(0)
   const tweenRef    = useRef<gsap.core.Tween | null>(null)
-  // Reactive label — causes re-render to update button text
   const [label, setLabel] = useState<typeof SHAPE_LABELS[number]>(SHAPE_LABELS[0])
 
   const particles = useRef<Particle[]>(
@@ -207,8 +271,7 @@ export default function ParticleMorph() {
     const targets = SHAPES[idx]
     const startX  = ps.map(p => p.baseX)
     const startY  = ps.map(p => p.baseY)
-
-    const prog = { value: 0 }
+    const prog    = { value: 0 }
 
     tweenRef.current?.kill()
     tweenRef.current = gsap.to(prog, {
@@ -274,8 +337,7 @@ export default function ParticleMorph() {
         const fy = Math.sin(t * p.freqY * Math.PI * 2 + p.phaseY) * p.ampY
         const cx = ((p.baseX + fx) * scale + offX) * d
         const cy = ((p.baseY + fy) * scale + offY) * d
-        // Subtle per-particle alpha variation baked at init time (not per-frame random)
-        ctx.globalAlpha = p.r * 0.52 + 0.45  // maps r [0.7,1.8] to alpha [0.81,0.94]
+        ctx.globalAlpha = p.r * 0.52 + 0.45
         ctx.beginPath()
         ctx.arc(cx, cy, p.r * d, 0, Math.PI * 2)
         ctx.fill()
