@@ -20,7 +20,7 @@
   flex-direction: column;
   gap: 0;
   font-family: var(--serif);
-  font-size: clamp(3.2rem, 9vw, 8.5rem);
+  font-size: clamp(2.4rem, 7vw, 6.5rem);
   font-weight: 200;
   line-height: 0.95;
   letter-spacing: -0.02em;
@@ -30,16 +30,5 @@
 
 .line {
   display: block;
-  will-change: opacity, transform;
-}
-
-.sub {
-  margin-top: 0.8rem;
-  font-family: var(--sans);
-  font-size: clamp(0.65rem, 1.2vw, 0.78rem);
-  font-weight: 400;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
   will-change: opacity, transform;
 }
