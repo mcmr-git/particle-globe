@@ -1,0 +1,104 @@
+/* ── Root: full viewport, dark background ────────────────────────── */
+.root {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Fade in from black */
+  animation: pageFadeIn 0.7s ease forwards;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Particle canvas ─────────────────────────────────────────────── */
+.canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ── Morph button ────────────────────────────────────────────────── */
+.morphBtn {
+  position: absolute;
+  bottom: 8vh;
+  left: 50%;
+  transform: translateX(-50%);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 0 1.8rem;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(240, 236, 228, 0.28);
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  z-index: 10;
+
+  /* Entrance: fade in after shape forms */
+  opacity: 0;
+  animation: btnAppear 0.8s ease 1.6s forwards;
+
+  transition: border-color 0.22s ease;
+}
+
+@keyframes btnAppear {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0);   }
+}
+
+.morphBtn:hover {
+  border-color: rgba(240, 236, 228, 0.65);
+}
+
+.morphBtn:focus-visible {
+  border-color: rgba(240, 236, 228, 0.6);
+  box-shadow: 0 0 0 2px rgba(240, 236, 228, 0.12);
+}
+
+.morphBtn:active {
+  opacity: 0.75;
+}
+
+/* ── Icon & label inside button ──────────────────────────────────── */
+.morphIcon {
+  width: 15px;
+  height: 15px;
+  color: rgba(240, 236, 228, 0.7);
+  flex-shrink: 0;
+  transition: color 0.2s, transform 0.6s ease;
+}
+
+.morphBtn:hover .morphIcon {
+  color: rgba(240, 236, 228, 0.95);
+}
+
+/* Spin icon when button is activated — via :active */
+.morphBtn:active .morphIcon {
+  transform: rotate(180deg);
+  transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.morphLabel {
+  font-family: var(--serif);
+  font-size: clamp(0.68rem, 1.4vw, 0.82rem);
+  font-weight: 100;
+  letter-spacing: 0.22em;
+  color: rgba(240, 236, 228, 0.62);
+  text-transform: lowercase;
+  white-space: nowrap;
+  transition: color 0.2s;
+}
+
+.morphBtn:hover .morphLabel {
+  color: rgba(240, 236, 228, 0.9);
+}
