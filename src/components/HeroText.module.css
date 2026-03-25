@@ -1,0 +1,45 @@
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  mix-blend-mode: normal;
+}
+
+.eyebrow {
+  font-family: var(--sans);
+  font-size: clamp(0.6rem, 1.1vw, 0.75rem);
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  will-change: opacity, transform;
+}
+
+.headline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-family: var(--serif);
+  font-size: clamp(3.2rem, 9vw, 8.5rem);
+  font-weight: 200;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  user-select: none;
+}
+
+.line {
+  display: block;
+  will-change: opacity, transform;
+}
+
+.sub {
+  margin-top: 0.8rem;
+  font-family: var(--sans);
+  font-size: clamp(0.65rem, 1.2vw, 0.78rem);
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  will-change: opacity, transform;
+}
