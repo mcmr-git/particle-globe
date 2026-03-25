@@ -154,16 +154,16 @@ export default function MagicButton() {
     const oy  = cy * dpr
 
     // Wave 1 — fast corona: small, very high energy
-    const wave1 = spawnWave(ox, oy, 320, 3.5*dpr, 14*dpr,  0.7, 2.2, 0.0075, 0.963)
+    const wave1 = spawnWave(ox, oy, 920, 3.5*dpr, 14*dpr,  0.7, 2.2, 0.0082, 0.963)
     // Wave 2 — shockwave ring: medium, slower
     let wave2: XParticle[] = []
     setTimeout(() => {
-      wave2 = spawnWave(ox, oy, 140, 1.4*dpr, 6*dpr, 1.5, 3.5, 0.0058, 0.956)
+      wave2 = spawnWave(ox, oy, 500, 1.4*dpr, 6*dpr, 1.5, 3.5, 0.0062, 0.956)
     }, 28)
     // Wave 3 — trailing dust: large, near-still
     let wave3: XParticle[] = []
     setTimeout(() => {
-      wave3 = spawnWave(ox, oy, 80, 0.4*dpr, 2.6*dpr, 0.5, 1.4, 0.0046, 0.971)
+      wave3 = spawnWave(ox, oy, 300, 0.4*dpr, 2.6*dpr, 0.5, 1.4, 0.0048, 0.971)
     }, 82)
 
     const ctx = canvas.getContext('2d')
