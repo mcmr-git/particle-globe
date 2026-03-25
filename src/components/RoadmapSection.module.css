@@ -2,15 +2,13 @@
 .section {
   position: relative;
   width: 100%;
-  /* SVG is 400×2800 aspect ratio 7:1.
-     We let it breathe at exactly 700vw tall so the SVG always fills
-     the full section without letterboxing when we use preserveAspectRatio="none". */
+  /* SVG is 400×2800, aspect 7:1 → 700vw keeps proportions exact */
   height: 700vw;
   background: var(--bg);
   overflow: hidden;
 }
 
-/* ── Burst canvas ────────────────────────────────────────────────── */
+/* ── Checkpoint burst canvas ────────────────────────────────────── */
 .burstCanvas {
   position: absolute;
   inset: 0;
@@ -38,7 +36,7 @@
   will-change: stroke-dashoffset;
 }
 
-/* ── Nodes: base state (hidden) ──────────────────────────────── */
+/* ── Nodes: base state (hidden) ──────────────────────────────────── */
 .node {
   position: absolute;
   display: flex;
@@ -48,15 +46,12 @@
   z-index: 20;
   opacity: 0;
   scale: 0.75;
-  /* CSS scale + opacity transitions — independent of JS transform */
   transition:
     opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
     scale   0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  /* JS float uses transform; CSS scale/opacity are separate properties */
   will-change: transform, opacity, scale;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  /* offset so dot is centred on SVG coordinate */
   translate: -50% -50%;
 }
 
@@ -65,15 +60,15 @@
   scale: 1;
 }
 
-.side_left  { flex-direction: row; }
-.side_right { flex-direction: row-reverse; }
+.side_left   { flex-direction: row; }
+.side_right  { flex-direction: row-reverse; }
 .side_center {
   flex-direction: column;
   align-items: center;
   gap: 10px;
 }
 
-/* ── Dot ───────────────────────────────────────────────────────────── */
+/* ── Dot ─────────────────────────────────────────────────────────── */
 .dot {
   display: block;
   flex-shrink: 0;
@@ -94,7 +89,7 @@
     0 0 24px rgba(240, 236, 228, 0.4);
 }
 
-/* ── Label ─────────────────────────────────────────────────────────── */
+/* ── Label ───────────────────────────────────────────────────────── */
 .label {
   display: flex;
   flex-direction: column;
@@ -117,7 +112,7 @@
   color: rgba(240, 236, 228, 1);
 }
 
-/* ── Final node ─────────────────────────────────────────────────────── */
+/* ── Final node ──────────────────────────────────────────────────── */
 .nodeFinal { gap: 0; }
 
 .labelFinal .labelText {
@@ -144,4 +139,21 @@
 .node:hover .australiaMap,
 .node:focus-visible .australiaMap {
   opacity: 0.95;
+}
+
+/* ── Magic button anchor ─────────────────────────────────────────── */
+.btnAnchor {
+  position: absolute;
+  /* Sits just below the last node (node 7 @ ~90% of SVG_H) */
+  top: 96%;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  /* The MagicButton itself is left:50% translateX(-50%) inside */
+  pointer-events: none;  /* let button inside handle its own events */
+}
+
+/* Ensure the button inside the anchor intercepts pointer events */
+.btnAnchor button {
+  pointer-events: auto;
 }

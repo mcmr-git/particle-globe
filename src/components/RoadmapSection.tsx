@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react'
 import styles from './RoadmapSection.module.css'
 import AustraliaOutline from './AustraliaOutline'
+import MagicButton from './MagicButton'
 
 // ─── Data ──────────────────────────────────────────────────────────
 interface Step {
@@ -84,7 +85,7 @@ function runBurst(canvas: HTMLCanvasElement, x: number, y: number) {
       p.life -= 0.02
       if (p.life <= 0) continue
       any = true
-      ctx.globalAlpha = p.life * p.life  // quadratic fade
+      ctx.globalAlpha = p.life * p.life
       ctx.fillStyle   = '#f0ece4'
       ctx.beginPath()
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
@@ -99,14 +100,16 @@ function runBurst(canvas: HTMLCanvasElement, x: number, y: number) {
 
 // ─── Component ──────────────────────────────────────────────────────
 export default function RoadmapSection() {
-  const sectionRef  = useRef<HTMLDivElement>(null)
-  const pathRef     = useRef<SVGPathElement>(null)
-  const nodeRefs    = useRef<(HTMLDivElement | null)[]>([])
-  const canvasRef   = useRef<HTMLCanvasElement>(null)
-  const floatRafRef = useRef<number>(0)
-  const revealed    = useRef<boolean[]>(new Array(NODES.length).fill(false))
+  const sectionRef   = useRef<HTMLDivElement>(null)
+  const pathRef      = useRef<SVGPathElement>(null)
+  const nodeRefs     = useRef<(HTMLDivElement | null)[]>([])
+  const canvasRef    = useRef<HTMLCanvasElement>(null)
+  const btnWrapRef   = useRef<HTMLDivElement>(null)
+  const floatRafRef  = useRef<number>(0)
+  const revealed     = useRef<boolean[]>(new Array(NODES.length).fill(false))
+  const btnRevealed  = useRef(false)
 
-  // Precomputed per-node float params (stable across renders)
+  // Precomputed per-node float params
   const floatParams = useRef(
     NODES.map(() => ({
       amp:    5  + Math.random() * 3,
@@ -131,8 +134,6 @@ export default function RoadmapSection() {
         const p = params[i]
         const dy = Math.sin(t * p.freq  * Math.PI * 2 + p.phase)  * p.amp
         const dx = Math.sin(t * p.xFreq * Math.PI * 2 + p.xPhase) * p.xAmp
-        // translate: -50% -50% is handled by CSS `translate` property.
-        // JS sets `transform` for float — they compose.
         el.style.transform = `translate(${dx}px, ${dy}px)`
       }
       floatRafRef.current = requestAnimationFrame(tick)
@@ -141,7 +142,7 @@ export default function RoadmapSection() {
     return () => cancelAnimationFrame(floatRafRef.current)
   }, [])
 
-  // ── Scroll → path draw + node reveals ──────────────────────────
+  // ── Scroll → path draw + node reveals + button reveal ──────────
   useEffect(() => {
     const section = sectionRef.current
     const pathEl  = pathRef.current
@@ -151,27 +152,33 @@ export default function RoadmapSection() {
     pathEl.style.strokeDasharray  = String(totalLength)
     pathEl.style.strokeDashoffset = String(totalLength)
 
-    // Each node sits at cy/SVG_H fraction of the SVG height = same fraction
-    // of the section height (since section h = 700vw = 7 * section.offsetWidth
-    // and SVG is 400×2800 with aspect ratio 7, using preserveAspectRatio=none).
     const nodeFractions = NODES.map(n => n.cy / SVG_H)
+    // Button reveals when scroll reaches ~96% of section
+    const BTN_FRACTION  = 0.96
 
     const onScroll = () => {
       const rect  = section.getBoundingClientRect()
       const sH    = section.offsetHeight
       const viewH = window.innerHeight
-      // prog: 0 when section-top = viewport-top, 1 when section-bottom = viewport-bottom
-      const prog = Math.max(0, Math.min(1, -rect.top / Math.max(1, sH - viewH)))
+      const prog  = Math.max(0, Math.min(1, -rect.top / Math.max(1, sH - viewH)))
 
       pathEl.style.strokeDashoffset = String(totalLength * (1 - prog))
 
+      // Node reveals
       for (let i = 0; i < NODES.length; i++) {
         if (revealed.current[i]) continue
-        // Reveal slightly before the path reaches the node for a natural feel
         if (prog >= nodeFractions[i] * 0.94) {
           revealed.current[i] = true
           nodeRefs.current[i]?.classList.add(styles.revealed)
         }
+      }
+
+      // Button reveal
+      if (!btnRevealed.current && prog >= BTN_FRACTION) {
+        btnRevealed.current = true
+        // Find the MagicButton element inside its wrapper and mark it visible
+        const btn = btnWrapRef.current?.querySelector('button')
+        if (btn) btn.classList.add('visible')
       }
     }
 
@@ -187,9 +194,9 @@ export default function RoadmapSection() {
     if (!canvas || !section) return
 
     const resize = () => {
-      const dpr   = Math.min(window.devicePixelRatio || 1, 2)
-      const w     = section.offsetWidth
-      const h     = section.offsetHeight
+      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const w   = section.offsetWidth
+      const h   = section.offsetHeight
       canvas.width  = w * dpr
       canvas.height = h * dpr
       canvas.style.width  = w + 'px'
@@ -202,7 +209,7 @@ export default function RoadmapSection() {
     return () => window.removeEventListener('resize', resize)
   }, [])
 
-  // ── Click / tap → particle burst ───────────────────────────────
+  // ── Click / tap → checkpoint burst ─────────────────────────────
   const handleActivate = useCallback(
     (nodeEl: HTMLDivElement | null) => {
       const canvas  = canvasRef.current
@@ -211,11 +218,9 @@ export default function RoadmapSection() {
 
       const nRect = nodeEl.getBoundingClientRect()
       const sRect = section.getBoundingClientRect()
-      // Position relative to section (canvas covers section, not viewport)
       const x = nRect.left + nRect.width  / 2 - sRect.left
       const y = nRect.top  + nRect.height / 2 - sRect.top
 
-      // Dot pulse
       const dot = nodeEl.querySelector<HTMLElement>('[data-dot]')
       if (dot) {
         dot.style.transition = 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1)'
@@ -230,7 +235,7 @@ export default function RoadmapSection() {
 
   return (
     <section ref={sectionRef} className={styles.section}>
-      {/* Burst canvas — covers entire section */}
+      {/* Checkpoint burst canvas */}
       <canvas ref={canvasRef} className={styles.burstCanvas} aria-hidden />
 
       {/* Scroll-drawn path */}
@@ -281,6 +286,15 @@ export default function RoadmapSection() {
           </div>
         </div>
       ))}
+
+      {/* ── Magic button at the foot of the section ── */}
+      <div
+        ref={btnWrapRef}
+        className={styles.btnAnchor}
+        aria-label="begin"
+      >
+        <MagicButton />
+      </div>
     </section>
   )
 }

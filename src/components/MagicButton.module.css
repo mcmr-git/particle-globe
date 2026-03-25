@@ -1,0 +1,78 @@
+/* ── Explosion canvas: fixed, full viewport, above everything ─── */
+.explosionCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── The button itself ──────────────────────────────────────────── */
+.btn {
+  /* Positioned by parent (RoadmapSection) absolutely at bottom */
+  position: absolute;
+  left: 50%;
+  /* translate handles the -50% x centring;
+     JS float also builds on top of this */
+  transform: translateX(-50%);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Pill shape */
+  padding: 0 2.6rem;
+  height: 48px;
+  border-radius: 999px;
+
+  /* Pure white border, transparent fill — the button is light itself */
+  background: transparent;
+  border: 1px solid rgba(240, 236, 228, 0.75);
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+
+  /* Entrance */
+  opacity: 0;
+  scale: 0.88;
+  transition:
+    opacity   0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    scale     0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s ease;
+
+  will-change: transform, opacity, scale;
+  z-index: 25;
+}
+
+/* Revealed by JS: .btnVisible class toggled after scroll */
+.btn.visible {
+  opacity: 1;
+  scale: 1;
+}
+
+.btn:hover {
+  border-color: rgba(240, 236, 228, 1);
+}
+
+.btn:hover .label {
+  color: rgba(240, 236, 228, 1);
+}
+
+.btn:focus-visible {
+  border-color: rgba(240, 236, 228, 0.9);
+  box-shadow: 0 0 0 2px rgba(240, 236, 228, 0.12);
+}
+
+/* ── Label text ─────────────────────────────────────────────────── */
+.label {
+  font-family: var(--serif);
+  font-size: clamp(0.78rem, 1.4vw, 0.95rem);
+  font-weight: 100;
+  letter-spacing: 0.28em;
+  text-transform: lowercase;
+  color: rgba(240, 236, 228, 0.82);
+  line-height: 1;
+  pointer-events: none;
+  transition: color 0.2s;
+}
