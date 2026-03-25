@@ -1,40 +1,34 @@
 'use client'
 
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import styles from './MagicButton.module.css'
 
 // ─── Particle type ──────────────────────────────────────────────────
 interface XParticle {
-  x: number
-  y: number
-  vx: number
-  vy: number
+  x: number; y: number
+  vx: number; vy: number
   r: number
-  life: number      // 0–1
-  decay: number     // life units lost per frame
+  life: number      // 0–1, current life
+  decay: number     // life lost per frame
   damping: number   // velocity multiplier per frame
 }
 
-// ─── Spawn one explosion wave from viewport-centre coords ──────────
+// ─── Spawn one wave of particles from an origin in canvas-px coords ───
 function spawnWave(
-  cx: number,
-  cy: number,
+  ox: number, oy: number,
   count: number,
-  speedMin: number,
-  speedMax: number,
-  rMin: number,
-  rMax: number,
+  speedMin: number, speedMax: number,
+  rMin: number, rMax: number,
   decay: number,
   damping: number,
 ): XParticle[] {
   return Array.from({ length: count }, (_, i) => {
-    // Evenly distribute base angles, then jitter
-    const baseAngle  = (i / count) * Math.PI * 2
-    const jitter     = (Math.random() - 0.5) * 0.55   // ±~16°
-    const angle      = baseAngle + jitter
-    const speed      = speedMin + Math.random() * (speedMax - speedMin)
+    const base  = (i / count) * Math.PI * 2
+    const jit   = (Math.random() - 0.5) * 0.55
+    const angle = base + jit
+    const speed = speedMin + Math.random() * (speedMax - speedMin)
     return {
-      x: cx, y: cy,
+      x: ox, y: oy,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       r:  rMin + Math.random() * (rMax - rMin),
@@ -47,18 +41,19 @@ function spawnWave(
 
 // ─── Component ──────────────────────────────────────────────────────
 export default function MagicButton() {
-  const btnRef    = useRef<HTMLButtonElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const rafRef    = useRef<number>(0)
-  const [fired, setFired] = useState(false)
+  const btnRef     = useRef<HTMLButtonElement>(null)
+  const canvasRef  = useRef<HTMLCanvasElement>(null)
+  const floatRaf   = useRef<number>(0)
+  const explosionRaf = useRef<number>(0)
+  // Track whether detonation has been triggered (avoids double-fire)
+  const firedRef   = useRef(false)
 
-  // ── Size canvas to full viewport ─────────────────────────────────
+  // ── Size canvas to full viewport (DPR-aware) ─────────────────────
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      const dpr     = Math.min(window.devicePixelRatio || 1, 2)
       canvas.width  = window.innerWidth  * dpr
       canvas.height = window.innerHeight * dpr
       canvas.style.width  = window.innerWidth  + 'px'
@@ -69,54 +64,73 @@ export default function MagicButton() {
     return () => window.removeEventListener('resize', resize)
   }, [])
 
-  // ── Float animation (same feel as roadmap nodes) ─────────────────
-  const floatParams = useRef({
-    amp:    4.5 + Math.random() * 2,
-    freq:   0.38 + Math.random() * 0.24,
+  // ── Self-managed reveal via IntersectionObserver ──────────────────
+  // Adds .visible class (CSS Module-scoped) directly via the imported styles object
+  useEffect(() => {
+    const btn = btnRef.current
+    if (!btn) return
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          btn.classList.add(styles.visible)
+          obs.disconnect()
+        }
+      },
+      { threshold: 0.5 }
+    )
+    obs.observe(btn)
+    return () => obs.disconnect()
+  }, [])
+
+  // ── Float animation: same sine-wave feel as roadmap nodes ───────────
+  const floatP = useRef({
+    amp:    4 + Math.random() * 2.5,
+    freq:   0.36 + Math.random() * 0.26,
     phase:  Math.random() * Math.PI * 2,
-    xAmp:   1.2 + Math.random() * 1.2,
-    xFreq:  0.22 + Math.random() * 0.18,
+    xAmp:   1.0 + Math.random() * 1.4,
+    xFreq:  0.20 + Math.random() * 0.18,
     xPhase: Math.random() * Math.PI * 2,
   })
-  const floatRaf = useRef<number>(0)
 
   useEffect(() => {
-    if (fired) return  // stop floating once detonated
-    const p  = floatParams.current
+    const p  = floatP.current
     const t0 = performance.now()
-
     const tick = (now: number) => {
-      const t  = (now - t0) * 0.001
+      if (firedRef.current) return   // stop float once detonated
+      const t   = (now - t0) * 0.001
       const btn = btnRef.current
       if (btn) {
         const dy = Math.sin(t * p.freq  * Math.PI * 2 + p.phase)  * p.amp
         const dx = Math.sin(t * p.xFreq * Math.PI * 2 + p.xPhase) * p.xAmp
-        btn.style.transform = `translateX(-50%) translate(${dx}px, ${dy}px)`
+        // translateX(-50%) centres the pill; translate(dx,dy) is the float
+        btn.style.transform = `translateX(-50%) translate(${dx}px,${dy}px)`
       }
       floatRaf.current = requestAnimationFrame(tick)
     }
     floatRaf.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(floatRaf.current)
-  }, [fired])
+  }, [])
 
-  // ── Main detonation logic ─────────────────────────────────────────
+  // ── Detonation ───────────────────────────────────────────────────
   const detonate = useCallback(() => {
+    if (firedRef.current) return
+    firedRef.current = true
+
     const btn    = btnRef.current
     const canvas = canvasRef.current
-    if (!btn || !canvas || fired) return
+    if (!btn || !canvas) return
 
-    setFired(true)
     cancelAnimationFrame(floatRaf.current)
 
-    // Capture button centre in viewport coords
+    // Capture button centre in viewport coords BEFORE dissolving
     const rect = btn.getBoundingClientRect()
-    const cx   = rect.left + rect.width  / 2
+    const cx   = rect.left + rect.width  / 2   // viewport px
     const cy   = rect.top  + rect.height / 2
 
-    // ── Phase 0: dissolve button ──────────────────────────────────
-    btn.style.transition = 'opacity 0.14s ease, transform 0.14s ease'
+    // ── Phase 0: dissolve the button (CSS inline) ──────────────────────
+    btn.style.transition = 'opacity 0.14s ease-out, transform 0.14s ease-out'
     btn.style.opacity    = '0'
-    btn.style.transform  = 'translateX(-50%) scale(0.82)'
+    btn.style.transform  = 'translateX(-50%) scale(0.78)'
 
     // ── Nuclear flash ─────────────────────────────────────────────
     const flash = document.createElement('div')
@@ -124,46 +138,44 @@ export default function MagicButton() {
       'position:fixed', 'inset:0', 'z-index:9998',
       'background:rgba(240,236,228,0.09)',
       'pointer-events:none',
-      'transition:opacity 80ms ease',
+      'opacity:1',
+      'transition:opacity 90ms ease',
     ].join(';')
     document.body.appendChild(flash)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        flash.style.opacity = '0'
-        setTimeout(() => flash.remove(), 120)
-      })
-    })
+    // Two rAF frames to ensure paint, then fade out
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      flash.style.opacity = '0'
+      setTimeout(() => flash.remove(), 130)
+    }))
 
-    // ── Particle waves ────────────────────────────────────────────
+    // ── Spawn particles (canvas-px coords = viewport-px × dpr) ─────────
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    // Canvas coords = viewport coords × dpr
-    const ox = cx * dpr
-    const oy = cy * dpr
+    const ox  = cx * dpr
+    const oy  = cy * dpr
 
-    // Wave 1 — fast corona, micro particles
-    const wave1 = spawnWave(ox, oy, 320, 3.5 * dpr, 13.5 * dpr, 0.7, 2.2, 0.0075, 0.962)
-
-    // Wave 2 — slower shockwave ring (spawned 28ms later)
+    // Wave 1 — fast corona: small, very high energy
+    const wave1 = spawnWave(ox, oy, 320, 3.5*dpr, 14*dpr,  0.7, 2.2, 0.0075, 0.963)
+    // Wave 2 — shockwave ring: medium, slower
     let wave2: XParticle[] = []
     setTimeout(() => {
-      wave2 = spawnWave(ox, oy, 140, 1.4 * dpr, 5.8 * dpr, 1.5, 3.5, 0.0060, 0.955)
+      wave2 = spawnWave(ox, oy, 140, 1.4*dpr, 6*dpr, 1.5, 3.5, 0.0058, 0.956)
     }, 28)
-
-    // Wave 3 — ultra-slow trailing dust (80ms later)
+    // Wave 3 — trailing dust: large, near-still
     let wave3: XParticle[] = []
     setTimeout(() => {
-      wave3 = spawnWave(ox, oy, 90, 0.5 * dpr, 2.6 * dpr, 0.5, 1.4, 0.0048, 0.970)
-    }, 80)
+      wave3 = spawnWave(ox, oy, 80, 0.4*dpr, 2.6*dpr, 0.5, 1.4, 0.0046, 0.971)
+    }, 82)
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    // Show canvas (was hidden)
     canvas.style.display = 'block'
 
     const tick = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      const all = [...wave1, ...wave2, ...wave3]
-      let anyAlive = false
+      const all   = [...wave1, ...wave2, ...wave3]
+      let   alive = false
 
       for (const p of all) {
         if (p.life <= 0) continue
@@ -173,21 +185,21 @@ export default function MagicButton() {
         p.vx   *= p.damping
         p.vy   *= p.damping
         p.life -= p.decay
-        if (p.r > 1.6) p.r *= 0.998   // very slow shrink on bigger particles
+        // Very-large particles shrink slowly
+        if (p.r > 1.6) p.r *= 0.9985
 
         if (p.life <= 0) continue
-        anyAlive = true
+        alive = true
 
-        // Alpha: steep fall-off — feels like it hangs then vanishes
-        const alpha = Math.pow(Math.max(0, p.life), 1.55)
+        // Steep power-law fade: hangs full then drops fast at end
+        const alpha = Math.pow(Math.max(0, p.life), 1.6)
 
-        // Subtle warm tint near centre (pure distance calc in canvas space)
-        const dist = Math.hypot(p.x - ox, p.y - oy)
-        const warm = Math.max(0, 1 - dist / (280 * dpr))   // warm within 280px
-        // Base: #f0ece4 = rgb(240,236,228)
-        const r = Math.round(240 + warm * 12)
-        const g = Math.round(236 + warm * 6)
-        const b = Math.round(228)
+        // Warm centre tint— particles near origin are slightly warmer
+        const dist   = Math.hypot(p.x - ox, p.y - oy)
+        const warmth = Math.max(0, 1 - dist / (260 * dpr))
+        const r = Math.round(240 + warmth * 14)
+        const g = Math.round(236 + warmth * 7)
+        const b = 228
 
         ctx.globalAlpha = alpha
         ctx.fillStyle   = `rgb(${r},${g},${b})`
@@ -198,33 +210,33 @@ export default function MagicButton() {
 
       ctx.globalAlpha = 1
 
-      if (anyAlive) {
-        rafRef.current = requestAnimationFrame(tick)
+      if (alive) {
+        explosionRaf.current = requestAnimationFrame(tick)
       } else {
         ctx.clearRect(0, 0, canvas.width, canvas.height)
         canvas.style.display = 'none'
       }
     }
 
-    // Start rAF after one frame so button has started dissolving
+    // Start one frame after dissolve starts so first rAF is clean
     requestAnimationFrame(() => {
-      rafRef.current = requestAnimationFrame(tick)
+      explosionRaf.current = requestAnimationFrame(tick)
     })
-  }, [fired])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      cancelAnimationFrame(rafRef.current)
-      cancelAnimationFrame(floatRaf.current)
-    }
   }, [])
 
-  if (fired) return null
+  // ── Cleanup ─────────────────────────────────────────────────────────
+  useEffect(() => () => {
+    cancelAnimationFrame(floatRaf.current)
+    cancelAnimationFrame(explosionRaf.current)
+  }, [])
 
+  // ── Render ─────────────────────────────────────────────────────────
+  // NOTE: we never unmount this component after firing. The button dissolves
+  // via inline-style opacity:0, the canvas shows the explosion then hides itself.
+  // This avoids the canvas being torn down mid-animation.
   return (
     <>
-      {/* Full-viewport explosion canvas */}
+      {/* Full-viewport explosion canvas: fixed, above everything, hidden until detonation */}
       <canvas
         ref={canvasRef}
         className={styles.explosionCanvas}
@@ -237,6 +249,7 @@ export default function MagicButton() {
         className={styles.btn}
         onClick={detonate}
         onTouchEnd={e => { e.preventDefault(); detonate() }}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') detonate() }}
         aria-label="Begin"
       >
         <span className={styles.label}>begin</span>
