@@ -4,7 +4,6 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import styles from './MagicButton.module.css'
 
-// ─── Particle type ──────────────────────────────────────────────────
 interface XParticle {
   x: number; y: number
   vx: number; vy: number
@@ -14,7 +13,6 @@ interface XParticle {
   damping: number
 }
 
-// ─── Spawn one wave of particles from an origin in canvas-px coords ───
 function spawnWave(
   ox: number, oy: number,
   count: number,
@@ -40,7 +38,6 @@ function spawnWave(
   })
 }
 
-// ─── Component ──────────────────────────────────────────────────────
 export default function MagicButton() {
   const btnRef       = useRef<HTMLButtonElement>(null)
   const canvasRef    = useRef<HTMLCanvasElement>(null)
@@ -49,7 +46,7 @@ export default function MagicButton() {
   const firedRef     = useRef(false)
   const router       = useRouter()
 
-  // ── Size canvas to full viewport ─────────────────────────────────
+  // Size canvas to full viewport
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -65,7 +62,7 @@ export default function MagicButton() {
     return () => window.removeEventListener('resize', resize)
   }, [])
 
-  // ── Self-reveal via IntersectionObserver ─────────────────────────
+  // Self-reveal via IntersectionObserver
   useEffect(() => {
     const btn = btnRef.current
     if (!btn) return
@@ -77,7 +74,7 @@ export default function MagicButton() {
     return () => obs.disconnect()
   }, [])
 
-  // ── Float animation ──────────────────────────────────────────────
+  // Float animation
   const floatP = useRef({
     amp:    4 + Math.random() * 2.5,
     freq:   0.36 + Math.random() * 0.26,
@@ -105,7 +102,6 @@ export default function MagicButton() {
     return () => cancelAnimationFrame(floatRaf.current)
   }, [])
 
-  // ── Detonation ───────────────────────────────────────────────────
   const detonate = useCallback(() => {
     if (firedRef.current) return
     firedRef.current = true
@@ -134,7 +130,7 @@ export default function MagicButton() {
       setTimeout(() => flash.remove(), 130)
     }))
 
-    // Particles
+    // Explosion particles
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     const ox  = cx * dpr
     const oy  = cy * dpr
@@ -159,11 +155,11 @@ export default function MagicButton() {
         if (p.r > 1.6) p.r *= 0.9985
         if (p.life <= 0) continue
         alive = true
-        const alpha   = Math.pow(Math.max(0, p.life), 1.6)
-        const dist    = Math.hypot(p.x - ox, p.y - oy)
-        const warmth  = Math.max(0, 1 - dist / (260 * dpr))
+        const alpha  = Math.pow(Math.max(0, p.life), 1.6)
+        const dist   = Math.hypot(p.x - ox, p.y - oy)
+        const warmth = Math.max(0, 1 - dist / (260 * dpr))
         ctx.globalAlpha = alpha
-        ctx.fillStyle   = `rgb(${Math.round(240+warmth*14)},${Math.round(236+warmth*7)},228)`
+        ctx.fillStyle   = `rgb(${Math.round(240 + warmth*14)},${Math.round(236 + warmth*7)},228)`
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill()
       }
       ctx.globalAlpha = 1
@@ -172,8 +168,14 @@ export default function MagicButton() {
     }
     requestAnimationFrame(() => { explosionRaf.current = requestAnimationFrame(tick) })
 
-    // ── Transition to /experience ──────────────────────────────────────────
-    // At T+1500ms: dark overlay fades in over 550ms
+    // ── Page transition: explosion → dark overlay → /experience ──────────
+    //
+    // T+1500ms: overlay fades IN over 550ms  (screen goes dark)
+    // T+2100ms: router.push fires            (SPA navigation starts)
+    // T+2220ms: overlay fades OUT over 650ms (new page’s own fade-in takes over)
+    //           Both sides are #060608 so the crossfade is imperceptible.
+    // T+2920ms: overlay removed from DOM
+    //
     setTimeout(() => {
       const overlay = document.createElement('div')
       overlay.style.cssText = [
@@ -183,15 +185,25 @@ export default function MagicButton() {
         'transition:opacity 550ms ease',
       ].join(';')
       document.body.appendChild(overlay)
+
+      // Fade overlay IN
       requestAnimationFrame(() => requestAnimationFrame(() => {
         overlay.style.opacity = '1'
       }))
-    }, 1500)
 
-    // At T+2100ms: navigate (overlay is now opaque)
-    setTimeout(() => {
-      router.push('/experience')
-    }, 2100)
+      // Navigate once overlay is fully opaque
+      setTimeout(() => {
+        router.push('/experience')
+
+        // Fade overlay back OUT so the new page’s entrance animation is visible.
+        // Without this the overlay stays opaque on top of the mounted page.
+        setTimeout(() => {
+          overlay.style.transition = 'opacity 0.65s ease'
+          overlay.style.opacity    = '0'
+          setTimeout(() => overlay.remove(), 700)
+        }, 120)
+      }, 600)
+    }, 1500)
   }, [router])
 
   useEffect(() => () => {
