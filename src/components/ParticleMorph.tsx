@@ -237,6 +237,17 @@ export default function ParticleMorph() {
   useEffect(() => {
     const canvas = canvasRef.current!
     const ps     = particles.current
+    // Guard: experience page must be reached via MagicButton, not direct URL.
+    // If the unlock flag is absent, redirect back to home.
+    if (typeof sessionStorage !== 'undefined') {
+      const unlocked = sessionStorage.getItem('poke_exp_unlocked')
+      if (!unlocked) {
+        router.push('/')
+        return
+      }
+      sessionStorage.removeItem('poke_exp_unlocked')
+    }
+
     const dprFn  = () => Math.min(window.devicePixelRatio || 1, 2)
 
     // Transform values — updated each tick, read by pointer handler

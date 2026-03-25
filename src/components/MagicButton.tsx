@@ -193,7 +193,7 @@ export default function MagicButton() {
 
       // Navigate once overlay is fully opaque
       setTimeout(() => {
-        router.push('/experience')
+        sessionStorage.setItem('poke_exp_unlocked','1'); router.push('/experience')
 
         // Fade overlay back OUT so the new page’s entrance animation is visible.
         // Without this the overlay stays opaque on top of the mounted page.
