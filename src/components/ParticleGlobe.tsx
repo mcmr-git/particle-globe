@@ -183,16 +183,6 @@ export default function ParticleGlobe() {
         ctx.fill()
       }
 
-
-      // ── radial vignette: transparent centre → #060608 at edges ──
-      const vRadius = Math.hypot(W, H) * 0.58
-      const vignette = ctx.createRadialGradient(cx, cy, 0, cx, cy, vRadius)
-      vignette.addColorStop(0.0, 'rgba(6,6,8,0)')
-      vignette.addColorStop(0.6, 'rgba(6,6,8,0)')
-      vignette.addColorStop(1.0, 'rgba(6,6,8,0.88)')
-      ctx.fillStyle = vignette
-      ctx.fillRect(0, 0, W, H)
-
       state.raf = requestAnimationFrame(draw)
     }
 
