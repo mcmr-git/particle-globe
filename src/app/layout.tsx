@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Particle Globe',
-  description: 'An interactive hyper-refined particle globe with cursor and touch reactivity.',
+  title: 'Michele Mauri — Portfolio',
+  description: 'Premium portfolio landing page with morphic particle animation.',
 }
 
 export default function RootLayout({

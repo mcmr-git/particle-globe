@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'Exposure';
-  src: url('/fonts/Exposure-205TF-VAR.woff2') format('woff2');
+  src: url('https://particle-globe-two.vercel.app/fonts/Exposure-205TF-VAR.woff2') format('woff2');
   font-weight: 100 900;
   font-display: swap;
 }
@@ -12,12 +12,13 @@
 }
 
 :root {
-  --bg: #060608;
-  --fg: #f0ece4;
-  --accent: #e8e0d0;
-  --muted: rgba(240, 236, 228, 0.35);
-  --muted-dim: rgba(240, 236, 228, 0.18);
-  --serif: 'Exposure', 'Georgia', serif;
+  --bg: #000000;
+  --fg: rgba(255, 255, 255, 0.95);
+  --muted: rgba(255, 255, 255, 0.52);
+  --muted-2: rgba(255, 255, 255, 0.22);
+  --line: rgba(255, 255, 255, 0.08);
+  --soft-line: rgba(255, 255, 255, 0.05);
+  --serif: 'Exposure', Georgia, serif;
   --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
@@ -36,13 +37,19 @@ html, body {
 }
 
 body {
-  overflow-y: scroll;
-}
-
-button {
-  font-family: inherit;
+  min-height: 100vh;
+  overflow-y: auto;
 }
 
 ::selection {
-  background: rgba(232, 224, 208, 0.2);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
 }
